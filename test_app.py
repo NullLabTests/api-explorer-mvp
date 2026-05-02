@@ -1,6 +1,6 @@
 import pytest
 import os
-from app import parse_readme
+from app import parse_readme, get_categories, search_apis, get_apis_for_category
 
 README_PATH = os.getenv('README_PATH', 'data/README.md')
 
@@ -90,3 +90,27 @@ This is invalid
     invalid_path.write_text(invalid_md.strip())
     result = parse_readme(invalid_path)
     assert result == []  # No valid table
+
+# Additional tests for app logic
+
+def test_get_categories():
+    """Test extracting categories from data."""
+    data = [{'category': 'A', 'apis': []}, {'category': 'B', 'apis': []}]
+    assert get_categories(data) == ['A', 'B']
+    assert get_categories([]) == []
+
+def test_search_apis():
+    """Test searching APIs by query."""
+    data = [{'category': 'A', 'apis': [{'name': 'Test API', 'description': 'A test description'}]}]
+    results = search_apis(data, 'test')
+    assert len(results) == 1
+    assert results[0]['name'] == 'Test API'
+
+    results = search_apis(data, 'foo')
+    assert len(results) == 0
+
+def test_get_apis_for_category():
+    """Test getting APIs for a specific category."""
+    data = [{'category': 'A', 'apis': [{'name': 'API1'}, {'name': 'API2'}]}]
+    assert len(get_apis_for_category(data, 'A')) == 2
+    assert get_apis_for_category(data, 'B') == []
