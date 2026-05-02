@@ -3,10 +3,31 @@ import markdown
 from bs4 import BeautifulSoup
 
 def parse_readme(file_path):
-    with open(file_path, 'r') as f:
-        md = f.read()
-    html = markdown.markdown(md, extensions=['tables'])
-    soup = BeautifulSoup(html, 'html.parser')
+    """
+    Parse the README.md file to extract API categories and details.
+
+    Args:
+        file_path (str): Path to the README file.
+
+    Returns:
+        list: List of dictionaries with 'category' and 'apis'.
+
+    Raises:
+        FileNotFoundError: If the file is not found.
+        ValueError: If parsing fails.
+    """
+    try:
+        with open(file_path, 'r') as f:
+            md = f.read()
+    except FileNotFoundError:
+        raise FileNotFoundError(f"README file not found at {file_path}")
+
+    try:
+        html = markdown.markdown(md, extensions=['tables'])
+        soup = BeautifulSoup(html, 'html.parser')
+    except Exception as e:
+        raise ValueError(f"Error parsing markdown: {e}")
+
     categories = []
     current_cat = None
     for elem in soup.find_all(['h3', 'table']):
