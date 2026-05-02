@@ -15,3 +15,7 @@ def test_parse_readme():
     assert len(animal_apis) > 0
     assert any(api['name'] == 'Cat Facts' for api in animal_apis)  # Check for a specific API
     assert any(api['https'] is True for api in animal_apis)  # Check data types
+
+def test_parse_full():
+    result = parse_readme('data/README.md')
+    assert any(d['category'] == 'Animals' for d in result)  # Example category
