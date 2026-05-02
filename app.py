@@ -1,6 +1,8 @@
 import os
 import markdown
 from bs4 import BeautifulSoup
+import streamlit as st
+import pandas as pd
 
 def parse_readme(file_path):
     """
@@ -74,3 +76,26 @@ def parse_readme(file_path):
             if apis:
                 categories.append({'category': current_cat, 'apis': apis})
     return categories
+
+data = parse_readme('data/README.md')
+
+st.title("Public API Explorer")
+
+categories = [d['category'] for d in data]
+
+selected_cat = st.sidebar.selectbox("Select Category", categories)
+
+search = st.sidebar.text_input("Search APIs")
+
+if search:
+    results = []
+    for cat in data:
+        for api in cat['apis']:
+            if search.lower() in api.get('name', '').lower() or search.lower() in api.get('description', '').lower():
+                results.append(api)
+    st.dataframe(pd.DataFrame(results))
+else:
+    for cat in data:
+        if cat['category'] == selected_cat:
+            df = pd.DataFrame(cat['apis'])
+            st.dataframe(df)
