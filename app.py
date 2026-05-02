@@ -3,6 +3,8 @@ import markdown
 from bs4 import BeautifulSoup
 import streamlit as st
 import pandas as pd
+import requests
+import json
 
 def parse_readme(file_path):
     """
@@ -131,3 +133,15 @@ else:
     else:
         apis = get_apis_for_category(data, selected_cat)
         st.dataframe(pd.DataFrame(apis))
+st.header("API Tester")
+selected_api = st.selectbox("Select API to Test", [api['name'] for cat in data for api in cat['apis']])
+endpoint = st.text_input("Endpoint URL")
+params = st.text_area("Params (JSON)")
+
+if st.button("Test"):
+    try:
+        param_dict = json.loads(params) if params else {}
+        response = requests.get(endpoint, params=param_dict)
+        st.json(response.json())
+    except Exception as e:
+        st.error(str(e))
