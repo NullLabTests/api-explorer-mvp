@@ -114,3 +114,57 @@ def test_get_apis_for_category():
     data = [{'category': 'A', 'apis': [{'name': 'API1'}, {'name': 'API2'}]}]
     assert len(get_apis_for_category(data, 'A')) == 2
     assert get_apis_for_category(data, 'B') == []
+
+from unittest.mock import patch, Mock
+import requests
+from app import test_api
+
+# Tests for test_api function
+def test_test_api_get_success():
+    with patch('requests.request') as mock_request:
+        mock_response = Mock()
+        mock_response.json.return_value = {"key": "value"}
+        mock_response.text = '{"key": "value"}'
+        mock_request.return_value = mock_response
+        response = test_api("GET", "http://example.com", '{"param": "val"}', "", "None", "", "", "")
+        assert response.json() == {"key": "value"}
+        mock_request.assert_called_with("GET", "http://example.com", params={"param": "val"}, json=None, headers={})
+
+def test_test_api_post_with_body():
+    with patch('requests.request') as mock_request:
+        mock_response = Mock()
+        mock_response.json.return_value = {"result": "ok"}
+        mock_request.return_value = mock_response
+        response = test_api("POST", "http://example.com", "", '{"data": "test"}', "None", "", "", "")
+        assert response.json() == {"result": "ok"}
+        mock_request.assert_called_with("POST", "http://example.com", params={}, json={"data": "test"}, headers={})
+
+def test_test_api_with_auth_header():
+    with patch('requests.request') as mock_request:
+        mock_response = Mock()
+        mock_response.json.return_value = {}
+        mock_request.return_value = mock_response
+        test_api("GET", "http://example.com", "", "", "API Key", "secret", "Authorization", "Header")
+        mock_request.assert_called_with("GET", "http://example.com", params={}, json=None, headers={"Authorization": "secret"})
+
+def test_test_api_with_auth_query():
+    with patch('requests.request') as mock_request:
+        mock_response = Mock()
+        mock_response.json.return_value = {}
+        mock_request.return_value = mock_response
+        test_api("GET", "http://example.com", "", "", "API Key", "secret", "api_key", "Query Param")
+        mock_request.assert_called_with("GET", "http://example.com", params={"api_key": "secret"}, json=None, headers={})
+
+def test_test_api_invalid_params():
+    with pytest.raises(ValueError, match="Invalid JSON in query params"):
+        test_api("GET", "http://example.com", "invalid json", "", "None", "", "", "")
+
+def test_test_api_invalid_body():
+    with pytest.raises(ValueError, match="Invalid JSON in request body"):
+        test_api("POST", "http://example.com", "", "invalid json", "None", "", "", "")
+
+def test_test_api_request_exception():
+    with patch('requests.request') as mock_request:
+        mock_request.side_effect = requests.RequestException("Connection error")
+        with pytest.raises(requests.RequestException):
+            test_api("GET", "http://example.com", "", "", "None", "", "", "")

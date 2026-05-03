@@ -6,6 +6,26 @@ import pandas as pd
 import requests
 import json
 
+def test_api(method, endpoint, params_json, body_json, auth_type, api_key, key_name, auth_location):
+    try:
+        param_dict = json.loads(params_json) if params_json else {}
+    except json.JSONDecodeError:
+        raise ValueError("Invalid JSON in query params")
+    headers = {}
+    body = None
+    if method in ["POST", "PUT"]:
+        try:
+            body = json.loads(body_json) if body_json else {}
+        except json.JSONDecodeError:
+            raise ValueError("Invalid JSON in request body")
+    if auth_type == "API Key" and api_key:
+        if auth_location == "Header":
+            headers[key_name] = api_key
+        else:
+            param_dict[key_name] = api_key
+    response = requests.request(method, endpoint, params=param_dict, json=body, headers=headers)
+    return response
+
 def parse_readme(file_path):
     """
     Parse the README.md file to extract API categories and details.
@@ -133,15 +153,53 @@ else:
     else:
         apis = get_apis_for_category(data, selected_cat)
         st.dataframe(pd.DataFrame(apis))
+# API Tester
 st.header("API Tester")
-selected_api = st.selectbox("Select API to Test", [api['name'] for cat in data for api in cat['apis']])
-endpoint = st.text_input("Endpoint URL")
-params = st.text_area("Params (JSON)")
+
+# Dictionary for API lookup
+api_dict = {api['name']: api for cat in data for api in cat['apis']}
+
+selected_api = st.selectbox("Select API to Test", sorted(api_dict.keys()))
+
+default_endpoint = api_dict.get(selected_api, {'link': ''})['link']
+
+endpoint = st.text_input("Endpoint URL", value=default_endpoint)
+
+method = st.selectbox("HTTP Method", ["GET", "POST", "PUT", "DELETE"])
+
+params_json = st.text_area("Query Params (JSON)")
+
+body_json = ""
+
+if method in ["POST", "PUT"]:
+    body_json = st.text_area("Request Body (JSON)")
+
+auth_type = st.selectbox("Authentication Type", ["None", "API Key"])
+
+api_key = ""
+key_name = "api_key"
+auth_location = "Query Param"
+
+if auth_type == "API Key":
+    api_key = st.text_input("API Key", type="password")  # Secure input
+    key_name = st.text_input("Key Name", value="api_key")
+    auth_location = st.selectbox("Location", ["Query Param", "Header"])
 
 if st.button("Test"):
-    try:
-        param_dict = json.loads(params) if params else {}
-        response = requests.get(endpoint, params=param_dict)
-        st.json(response.json())
-    except Exception as e:
-        st.error(str(e))
+    if not endpoint:
+        st.error("Endpoint URL is required.")
+    elif not endpoint.startswith(("http://", "https://")):
+        st.error("Invalid URL scheme. Must be http or https.")
+    else:
+        try:
+            response = test_api(method, endpoint, params_json, body_json, auth_type, api_key, key_name, auth_location)
+            try:
+                st.json(response.json())
+            except json.JSONDecodeError:
+                st.text("Non-JSON response received:\n" + response.text)
+        except (ValueError, requests.RequestException) as e:
+            st.error(str(e))
+        except Exception as e:
+            st.error(f"Unexpected error: {str(e)}")
+
+# Note: For production, to mitigate SSRF, consider implementing an allowlist of domains or using a proxy service.
