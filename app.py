@@ -4,10 +4,9 @@ from bs4 import BeautifulSoup
 import streamlit as st
 import pandas as pd
 import requests
-import json
-
-def test_api(method, endpoint, params_json, body_json, auth_type, api_key, key_name, auth_location):
-    try:
+ import json
+ from typing import List, Dict, Any
+def call_api(method: str, endpoint: str, params_json: str, body_json: str, auth_type: str, api_key: str, key_name: str, auth_location: str) -> requests.Response:\n    try:
         param_dict = json.loads(params_json) if params_json else {}
     except json.JSONDecodeError:
         raise ValueError("Invalid JSON in query params")
@@ -26,8 +25,7 @@ def test_api(method, endpoint, params_json, body_json, auth_type, api_key, key_n
     response = requests.request(method, endpoint, params=param_dict, json=body, headers=headers)
     return response
 
-def parse_readme(file_path):
-    """
+def parse_readme(file_path: str) -> List[Dict[str, Any]]:\n    """
     Parse the README.md file to extract API categories and details.
 
     Args:
@@ -106,21 +104,17 @@ def parse_readme(file_path):
                 categories.append({'category': current_cat, 'apis': apis})
     return categories
 
-def get_categories(data):
-    """Extract list of category names from parsed data."""
+def get_categories(data: List[Dict[str, Any]]) -> List[str]:\n    """Extract list of category names from parsed data."""
     return [d['category'] for d in data]
 
-def search_apis(data, query):
-    """Search APIs by name or description."""
+def search_apis(data: List[Dict[str, Any]], query: str) -> List[Dict[str, Any]]:\n    """Search APIs by name or description."""
     results = []
     for cat in data:
         for api in cat['apis']:
-            if query.lower() in api.get('name', '').lower() or query.lower() in api.get('description', '').lower():
-                results.append(api)
+            name = api.get('name', '').lower()\n            desc = api.get('description', '').lower()\n            if query.lower() in name or query.lower() in desc:\n                results.append(api)
     return results
 
-def get_apis_for_category(data, category):
-    """Get list of APIs for a specific category."""
+def get_apis_for_category(data: List[Dict[str, Any]], category: str) -> List[Dict[str, Any]]:\n    """Get list of APIs for a specific category."""
     for cat in data:
         if cat['category'] == category:
             return cat['apis']
@@ -192,8 +186,7 @@ if st.button("Test"):
         st.error("Invalid URL scheme. Must be http or https.")
     else:
         try:
-            response = test_api(method, endpoint, params_json, body_json, auth_type, api_key, key_name, auth_location)
-            try:
+            response = call_api(method, endpoint, params_json, body_json, auth_type, api_key, key_name, auth_location)\n            try:
                 st.json(response.json())
             except json.JSONDecodeError:
                 st.text("Non-JSON response received:\n" + response.text)
